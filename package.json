@@ -8,7 +8,8 @@
   "license": "BSL-1.0",
   "private": false,
   "scripts": {
-    "test": "yarn mocha"
+    "test": "yarn mocha",
+    "lint": "yarn prettier --write ."
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.0",
@@ -21,7 +22,8 @@
     "mocha": "9.0.3",
     "mochawesome": "^6.2.2",
     "ts-node": "^10.2.0",
-    "typescript": "^4.3.5"
+    "typescript": "^4.3.5",
+    "prettier": "2.3.2"
   },
   "dependencies": {
     "jsbi": "3.1.6",
