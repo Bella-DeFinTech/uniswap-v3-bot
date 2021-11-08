@@ -61,7 +61,7 @@ describe("Test Strategy", function () {
     let tickSpacing = 60;
     let initialAssetsAmount = mul10pow(new BN(2000), 6);
     let startDate = getDate(2021, 5, 5);
-    let endDate = getDate(2021, 7, 8);
+    let endDate = getDate(2021, 11, 6);
 
     let trigger = function (
       phase: Phase,

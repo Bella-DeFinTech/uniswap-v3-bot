@@ -102,9 +102,9 @@ export async function buildStrategy(
       events.push(...burnEvents);
       events.push(...swapEvents);
       events.sort(function (a, b) {
-        return a.block_number == b.block_number
-          ? a.log_index - b.log_index
-          : a.block_number - b.block_number;
+        return a.blockNumber == b.blockNumber
+          ? a.logIndex - b.logIndex
+          : a.blockNumber - b.blockNumber;
       });
       return events;
     }
@@ -133,16 +133,16 @@ export async function buildStrategy(
         case EventType.MINT:
           await configurableCorePool.mint(
             systemUser,
-            event.tick_lower,
-            event.tick_upper,
+            event.tickLower,
+            event.tickUpper,
             event.liquidity
           );
           break;
         case EventType.BURN:
           await configurableCorePool.burn(
             systemUser,
-            event.tick_lower,
-            event.tick_upper,
+            event.tickLower,
+            event.tickUpper,
             event.liquidity
           );
           break;
