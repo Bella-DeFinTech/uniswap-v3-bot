@@ -4,6 +4,7 @@ import {
   TickMath,
   LiquidityMath,
   FullMath,
+  EventDBManager,
 } from "uniswap-v3-simulator";
 import { getDate } from "../src/util/DateUtils";
 import { buildStrategy, CommonVariables, Phase } from "../src/Strategy";
@@ -34,10 +35,13 @@ export interface RebalanceLog {
 }
 
 describe("Test Strategy", function () {
+  const eventDBManagerPath =
+    "events_0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8.db";
+  const rebalanceLogDBManagerPath = "rebalance_log_usdc_weth_3000.db";
   let logDB: LogDBManager;
 
   beforeEach(async function () {
-    logDB = new LogDBManager("rebalance_log_usdc_weth_3000.db");
+    logDB = new LogDBManager(rebalanceLogDBManagerPath);
     await logDB.initTables();
   });
 
@@ -161,14 +165,16 @@ describe("Test Strategy", function () {
               TickMath.getTickAtSqrtRatio(
                 JSBI.BigInt(lower_price.toString())
               ).toString()
-            )
+            ),
+            tickSpacing
           );
           tick_upper = getAvailableTick(
             new BN(
               TickMath.getTickAtSqrtRatio(
                 JSBI.BigInt(upper_price.toString())
               ).toString()
-            )
+            ),
+            tickSpacing
           );
           // recalculate lower_price and upper_price according to available tick index
           lower_price = toBN(TickMath.getSqrtRatioAtTick(tick_lower));
@@ -360,7 +366,11 @@ describe("Test Strategy", function () {
       );
     };
 
+    // Make sure the DB has been initialized, and see scripts/EventsDownloaders
+    // if you want to update the events.
+    let eventDB = await EventDBManager.buildInstance(eventDBManagerPath);
     let strategy = await buildStrategy(
+      eventDB,
       await buildAccount(initialAssetsAmount, new BN(0)),
       trigger,
       cache,
@@ -370,51 +380,51 @@ describe("Test Strategy", function () {
 
     await strategy.backtest(startDate, endDate);
 
-    function getStandardDeviation(data: BN[]): BN {
-      let sum = function (x: BN, y: BN) {
-        return x.add(y);
-      };
-      let square = function (x: BN) {
-        return x.mul(x);
-      };
-
-      let mean: BN = data.reduce(sum).divn(data.length);
-      let deviations = data.map(function (x: BN) {
-        return x.sub(mean);
-      });
-      return sqrt(
-        deviations
-          .map(square)
-          .reduce(sum)
-          .divn(data.length - 1)
-      );
-    }
-
-    function sqrt(value: BN): BN {
-      return toBN(FullMath.sqrt(toJSBI(value)));
-    }
-
-    function getAvailableTick(tick: BN): number {
-      let quotient = tick.divn(tickSpacing);
-      return quotient.muln(tickSpacing).toNumber();
-    }
-
-    function getAssetsBalanceInUSDC(
-      token0_balance: BN,
-      token1_balance: BN,
-      curr_price: BN
-    ): BN {
-      return token0_balance.add(
-        token1_balance.div(curr_price.sqr().shrn(96 * 2))
-      );
-    }
-
-    function inversePriceX192(priceX192: BN): BN {
-      return new BN(1).shln(192 * 2).div(priceX192);
-    }
-
-    function sqrtPriceToView(sqrtPriceX96: BN): BN {
-      return get10pow(12).div(new BN(sqrtPriceX96).sqr().shrn(96 * 2));
-    }
+    await strategy.shutdown();
   });
 });
+
+function getStandardDeviation(data: BN[]): BN {
+  let sum = function (x: BN, y: BN) {
+    return x.add(y);
+  };
+  let square = function (x: BN) {
+    return x.mul(x);
+  };
+
+  let mean: BN = data.reduce(sum).divn(data.length);
+  let deviations = data.map(function (x: BN) {
+    return x.sub(mean);
+  });
+  return sqrt(
+    deviations
+      .map(square)
+      .reduce(sum)
+      .divn(data.length - 1)
+  );
+}
+
+function sqrt(value: BN): BN {
+  return toBN(FullMath.sqrt(toJSBI(value)));
+}
+
+function getAvailableTick(tick: BN, tickSpacing: number): number {
+  let quotient = tick.divn(tickSpacing);
+  return quotient.muln(tickSpacing).toNumber();
+}
+
+function getAssetsBalanceInUSDC(
+  token0_balance: BN,
+  token1_balance: BN,
+  curr_price: BN
+): BN {
+  return token0_balance.add(token1_balance.div(curr_price.sqr().shrn(96 * 2)));
+}
+
+function inversePriceX192(priceX192: BN): BN {
+  return new BN(1).shln(192 * 2).div(priceX192);
+}
+
+function sqrtPriceToView(sqrtPriceX96: BN): BN {
+  return get10pow(12).div(new BN(sqrtPriceX96).sqr().shrn(96 * 2));
+}

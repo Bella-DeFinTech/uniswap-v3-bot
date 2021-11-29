@@ -1,27 +1,32 @@
 import {
   ConfigurableCorePool,
   FeeAmount,
+  PoolConfig,
+  SimulationDataManager,
   SimulatorClient,
+  SQLiteSimulationDataManager,
   Transition,
 } from "uniswap-v3-simulator";
 import JSBI from "jsbi";
 
 describe("Test Simulator", function () {
-  let clientInstace: SimulatorClient;
+  let clientInstance: SimulatorClient;
 
   beforeEach(async function () {
-    clientInstace = await SimulatorClient.buildInstance();
+    let simulationDataManager: SimulationDataManager =
+      await SQLiteSimulationDataManager.buildInstance();
+    clientInstance = new SimulatorClient(simulationDataManager);
   });
 
   afterEach(async function () {
-    await clientInstace.shutdown();
+    await clientInstance.shutdown();
   });
 
   it("can be used by user", async function () {
     let sqrtPriceX96ForInitialization = JSBI.BigInt("4295128739");
     let configurableCorePool: ConfigurableCorePool =
-      clientInstace.initCorePoolFromConfig(
-        SimulatorClient.buildPoolConfig(60, "USDC", "ETH", FeeAmount.MEDIUM)
+      clientInstance.initCorePoolFromConfig(
+        new PoolConfig(60, "USDC", "ETH", FeeAmount.MEDIUM)
       );
     await configurableCorePool.initialize(sqrtPriceX96ForInitialization);
 

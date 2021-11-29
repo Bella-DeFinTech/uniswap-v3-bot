@@ -8,6 +8,8 @@
   "license": "BSL-1.0",
   "private": false,
   "scripts": {
+    "download": "ts-node scripts/EventsDownloader.ts",
+    "update": "ts-node scripts/EventsUpdater.ts",
     "test": "yarn mocha",
     "lint": "yarn prettier --write ."
   },
@@ -21,9 +23,9 @@
     "chai-as-promised": "^7.1.1",
     "mocha": "9.0.3",
     "mochawesome": "^6.2.2",
+    "prettier": "2.3.2",
     "ts-node": "^10.2.0",
-    "typescript": "^4.3.5",
-    "prettier": "2.3.2"
+    "typescript": "^4.3.5"
   },
   "dependencies": {
     "jsbi": "3.1.6",
@@ -32,7 +34,7 @@
   "mocha": {
     "colors": true,
     "spec": [
-      "test/**/*.test.ts"
+      "test/**/Backtest.test.ts"
     ],
     "reporter": [
       "mochawesome"
