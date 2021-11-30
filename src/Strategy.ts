@@ -12,7 +12,7 @@ import {
   SimulationDataManager,
   SimulatorClient,
   SQLiteSimulationDataManager,
-} from "uniswap-v3-simulator";
+} from "@bella-defintech/uniswap-v3-simulator";
 
 export interface Strategy {
   trigger: (

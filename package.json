@@ -28,8 +28,8 @@
     "typescript": "^4.3.5"
   },
   "dependencies": {
-    "jsbi": "3.1.6",
-    "uniswap-v3-simulator": "file:../uniswap-v3-simulator"
+    "@bella-defintech/uniswap-v3-simulator": "^0.1.2",
+    "jsbi": "3.1.6"
   },
   "mocha": {
     "colors": true,

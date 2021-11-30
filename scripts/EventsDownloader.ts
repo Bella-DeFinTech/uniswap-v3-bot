@@ -1,5 +1,7 @@
-import { MainnetDataDownloader } from "uniswap-v3-simulator";
-import { EndBlockTypeWhenInit } from "uniswap-v3-simulator/dist/entity/EndBlockType";
+import {
+  EndBlockTypeWhenInit,
+  MainnetDataDownloader,
+} from "@bella-defintech/uniswap-v3-simulator";
 
 async function main() {
   let poolName = "events";

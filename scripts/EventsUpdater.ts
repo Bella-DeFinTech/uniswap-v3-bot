@@ -1,5 +1,7 @@
-import { MainnetDataDownloader } from "uniswap-v3-simulator";
-import { EndBlockTypeWhenRecover } from "uniswap-v3-simulator/dist/entity/EndBlockType";
+import {
+  EndBlockTypeWhenRecover,
+  MainnetDataDownloader,
+} from "@bella-defintech/uniswap-v3-simulator";
 
 async function main() {
   let endBlock: EndBlockTypeWhenRecover = "latestDownloaded";

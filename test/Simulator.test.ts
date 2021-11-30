@@ -6,7 +6,7 @@ import {
   SimulatorClient,
   SQLiteSimulationDataManager,
   Transition,
-} from "uniswap-v3-simulator";
+} from "@bella-defintech/uniswap-v3-simulator";
 import JSBI from "jsbi";
 
 describe("Test Simulator", function () {

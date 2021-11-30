@@ -5,7 +5,7 @@ import {
   LiquidityMath,
   FullMath,
   EventDBManager,
-} from "uniswap-v3-simulator";
+} from "@bella-defintech/uniswap-v3-simulator";
 import { getDate } from "../src/util/DateUtils";
 import { buildStrategy, CommonVariables, Phase } from "../src/Strategy";
 import BN from "bn.js";
