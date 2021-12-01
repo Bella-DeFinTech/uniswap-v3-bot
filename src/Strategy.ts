@@ -1,7 +1,6 @@
 import { LiquidityEvent } from "./LiquidityEvent";
 import { SwapEvent } from "./SwapEvent";
 import { getTomorrow, format } from "./util/DateUtils";
-import { EventDBManager } from "./EventDBManager";
 import { EventType } from "./EventType";
 import { Engine, buildDryRunEngine } from "./Engine";
 import { Account } from "./Account";
@@ -9,9 +8,11 @@ import JSBI from "jsbi";
 import {
   ConfigurableCorePool,
   CorePoolView,
-  FeeAmount,
+  EventDBManager,
+  SimulationDataManager,
   SimulatorClient,
-} from "uniswap-v3-simulator";
+  SQLiteSimulationDataManager,
+} from "@bella-defintech/uniswap-v3-simulator";
 
 export interface Strategy {
   trigger: (
@@ -32,7 +33,8 @@ export interface Strategy {
   ) => Promise<void>;
   evaluate: (corePoolView: CorePoolView, variable: Map<string, any>) => void;
   backtest: (startDate: Date, endDate: Date) => Promise<void>;
-  run: (dryrun: boolean) => void;
+  run: (dryrun: boolean) => Promise<void>;
+  shutdown: () => Promise<void>;
 }
 
 export enum Phase {
@@ -49,6 +51,7 @@ export enum CommonVariables {
 }
 
 export async function buildStrategy(
+  eventDB: EventDBManager,
   account: Account,
   trigger: (
     phase: Phase,
@@ -70,31 +73,32 @@ export async function buildStrategy(
 ): Promise<Strategy> {
   let variable: Map<string, any> = new Map();
 
+  /* 
+    Everytime we do the backtest of a strategy, we build an instance of the 
+    Tuner, replay events in a batch of a day from startDate soecified by the 
+    user, ask the user whether they want to do some transaction(mint, burn, 
+    swap, collect). If the user choose to trigger it, we run the act callback 
+    then repeat the steps above until the endDate comes.
+  */
   async function backtest(startDate: Date, endDate: Date): Promise<void> {
     // initial environment
     const systemUser = "0xSYSTEM";
-    let liquidityEventDB = new EventDBManager(
-      "liquidity_events_usdc_weth_3000.db"
-    );
-    let swapEventDB = new EventDBManager("swap_events_usdc_weth_3000.db");
     async function getAndSortEventByDate(
       startDate: Date,
       endDate: Date
     ): Promise<(LiquidityEvent | SwapEvent)[]> {
       let events: (LiquidityEvent | SwapEvent)[] = [];
-      let mintEvents: LiquidityEvent[] =
-        await liquidityEventDB.getLiquidityEventsByDate(
-          EventType.MINT,
-          format(startDate, "yyyy-MM-dd HH:mm:ss"),
-          format(endDate, "yyyy-MM-dd HH:mm:ss")
-        );
-      let burnEvents: LiquidityEvent[] =
-        await liquidityEventDB.getLiquidityEventsByDate(
-          EventType.BURN,
-          format(startDate, "yyyy-MM-dd HH:mm:ss"),
-          format(endDate, "yyyy-MM-dd HH:mm:ss")
-        );
-      let swapEvents: SwapEvent[] = await swapEventDB.getSwapEventsByDate(
+      let mintEvents: LiquidityEvent[] = await eventDB.getLiquidityEventsByDate(
+        EventType.MINT,
+        format(startDate, "yyyy-MM-dd HH:mm:ss"),
+        format(endDate, "yyyy-MM-dd HH:mm:ss")
+      );
+      let burnEvents: LiquidityEvent[] = await eventDB.getLiquidityEventsByDate(
+        EventType.BURN,
+        format(startDate, "yyyy-MM-dd HH:mm:ss"),
+        format(endDate, "yyyy-MM-dd HH:mm:ss")
+      );
+      let swapEvents: SwapEvent[] = await eventDB.getSwapEventsByDate(
         format(startDate, "yyyy-MM-dd HH:mm:ss"),
         format(endDate, "yyyy-MM-dd HH:mm:ss")
       );
@@ -113,17 +117,16 @@ export async function buildStrategy(
     // let usdcBalance = account.USDC;
     // let wethBalance = account.WETH;
 
-    // TODO the pool should be initialized by param rather than fixed
-    let clientInstace: SimulatorClient = await SimulatorClient.buildInstance();
-    let sqrtPriceX96ForInitialization = JSBI.BigInt(
-      "0x43efef20f018fdc58e7a5cf0416a"
-    );
+    let simulationDataManager: SimulationDataManager =
+      await SQLiteSimulationDataManager.buildInstance();
+    let clientInstance = new SimulatorClient(simulationDataManager);
+    let poolConfig = await eventDB.getPoolConfig();
     let configurableCorePool: ConfigurableCorePool =
-      clientInstace.initCorePoolFromConfig(
-        SimulatorClient.buildPoolConfig(60, "USDC", "ETH", FeeAmount.MEDIUM)
-      );
+      clientInstance.initCorePoolFromConfig(poolConfig!);
+    let sqrtPriceX96ForInitialization = await eventDB.getInitialSqrtPriceX96();
     await configurableCorePool.initialize(sqrtPriceX96ForInitialization);
 
+    // This is an implementation of Engine interface based on the Tuner.
     let engine = await buildDryRunEngine(account, configurableCorePool);
 
     async function replayEvent(
@@ -215,15 +218,19 @@ export async function buildStrategy(
       currDate = getTomorrow(currDate);
     }
     // shutdown environment
-    await liquidityEventDB.close();
-    await swapEventDB.close();
-    await clientInstace.shutdown();
+    await clientInstance.shutdown();
     // evaluate results
     evaluate(configurableCorePool.getCorePool(), variable);
   }
 
-  function run(dryrun: boolean) {
+  async function run(dryrun: boolean) {
+    // If we want to make the strategy run on mainnet, just implement Engine interface with abi to interact with mainnet contracts.
+    // We can also make the strategy run based on our events DB which updates and represents state of mainnet.
     // TODO
+  }
+
+  async function shutdown() {
+    await eventDB.close();
   }
 
   // TODO account here should be a view
@@ -236,5 +243,6 @@ export async function buildStrategy(
     evaluate,
     backtest,
     run,
+    shutdown,
   };
 }

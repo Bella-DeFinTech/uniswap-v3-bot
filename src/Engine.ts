@@ -1,6 +1,6 @@
 import assert from "assert";
 import JSBI from "jsbi";
-import { ConfigurableCorePool } from "uniswap-v3-simulator";
+import { ConfigurableCorePool } from "@bella-defintech/uniswap-v3-simulator";
 import { Account } from "./Account";
 import { isPositive, toBN } from "./util/BNUtils";
 

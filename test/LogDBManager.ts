@@ -1,5 +1,5 @@
 import { Knex, knex as knexBuilder } from "knex";
-import { DateConverter } from "uniswap-v3-simulator";
+import { DateConverter } from "@bella-defintech/uniswap-v3-simulator";
 import BN from "bn.js";
 import { RebalanceLog } from "./Backtest.test";
 
