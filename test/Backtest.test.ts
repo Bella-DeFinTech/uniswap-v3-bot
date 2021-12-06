@@ -5,11 +5,14 @@ import {
   LiquidityMath,
   FullMath,
   EventDBManager,
+  getDate,
+  mul10pow,
+  get10pow,
+  toBN,
+  toJSBI,
 } from "@bella-defintech/uniswap-v3-simulator";
-import { getDate } from "../src/util/DateUtils";
 import { buildStrategy, CommonVariables, Phase } from "../src/Strategy";
-import BN from "bn.js";
-import { mul10pow, get10pow, toBN, toJSBI } from "../src/util/BNUtils";
+import { BigNumber as BN } from "ethers";
 import { Engine } from "../src/Engine";
 import { MaxUint128, ZERO } from "../src/InternalConstants";
 import { Account, buildAccount } from "../src/Account";
@@ -63,8 +66,8 @@ describe("Test Strategy", function () {
     // set std ratio
     let stdRatio = 1.96;
     let tickSpacing = 60;
-    let initialAssetsAmount = mul10pow(new BN(2000), 6);
-    let startDate = getDate(2021, 5, 5);
+    let initialAssetsAmount = mul10pow(BN.from(2000), 6);
+    let startDate = getDate(2021, 5, 4);
     let endDate = getDate(2021, 11, 6);
 
     let trigger = function (
@@ -138,30 +141,30 @@ describe("Test Strategy", function () {
           // TODO calculate and decide if not to rebalance
           // std based on price and not sqrt
           // based on ETH/USDC as pool native price
-          // s_deviation = getStandardDeviation(priceLogs.map(log => new BN(log.sqrt_price_x96).sqr()))
+          // s_deviation = getStandardDeviation(priceLogs.map(log => BN.from(log.sqrt_price_x96).sqr()))
           // lower_price = sqrt(curr_price.sqr().sub(s_deviation.muln(stdRatio * 100).divn(100)))
           // upper_price = sqrt(curr_price.sqr().add(s_deviation.muln(stdRatio * 100).divn(100)))
           // based on USDC/ETH as we use in analysis
 
           s_deviation = getStandardDeviation(
-            priceLogs.map((log) => inversePriceX192(toBN(log).sqr()))
+            priceLogs.map((log) => inversePriceX192(toBN(log).pow(2)))
           );
           lower_price = sqrt(
             inversePriceX192(
-              inversePriceX192(curr_price.sqr()).add(
-                s_deviation.muln(stdRatio * 100).divn(100)
+              inversePriceX192(curr_price.pow(2)).add(
+                s_deviation.mul(stdRatio * 100).div(100)
               )
             )
           );
           upper_price = sqrt(
             inversePriceX192(
-              inversePriceX192(curr_price.sqr()).sub(
-                s_deviation.muln(stdRatio * 100).divn(100)
+              inversePriceX192(curr_price.pow(2)).sub(
+                s_deviation.mul(stdRatio * 100).div(100)
               )
             )
           );
           tick_lower = getAvailableTick(
-            new BN(
+            BN.from(
               TickMath.getTickAtSqrtRatio(
                 JSBI.BigInt(lower_price.toString())
               ).toString()
@@ -169,7 +172,7 @@ describe("Test Strategy", function () {
             tickSpacing
           );
           tick_upper = getAvailableTick(
-            new BN(
+            BN.from(
               TickMath.getTickAtSqrtRatio(
                 JSBI.BigInt(upper_price.toString())
               ).toString()
@@ -191,12 +194,12 @@ describe("Test Strategy", function () {
           if (!variable.has(REBALANCE_LOG)) {
             // firstly mint
             variable.set(REBALANCE_LOG, new Array<RebalanceLog>());
-            amount0_out = new BN(0);
-            amount1_out = new BN(0);
-            token0_fee = new BN(0);
-            token1_fee = new BN(0);
+            amount0_out = BN.from(0);
+            amount1_out = BN.from(0);
+            token0_fee = BN.from(0);
+            token1_fee = BN.from(0);
             token0_balance_after_collect = initialAssetsAmount;
-            token1_balance_after_collect = new BN(0);
+            token1_balance_after_collect = BN.from(0);
             amount_limit = initialAssetsAmount;
           } else {
             lastTickLower = variable.get(LAST_TICK_LOWER) as number;
@@ -231,14 +234,14 @@ describe("Test Strategy", function () {
             account = variable.get(CommonVariables.ACCOUNT) as Account;
             let token0AmountAfter = account.USDC;
             let token1AmountAfter = account.WETH;
-            amount0_out = new BN(token0AmountAfter)
-              .sub(new BN(token0AmountBefore))
+            amount0_out = BN.from(token0AmountAfter)
+              .sub(BN.from(token0AmountBefore))
               .sub(token0_fee);
-            amount1_out = new BN(token1AmountAfter)
-              .sub(new BN(token1AmountBefore))
+            amount1_out = BN.from(token1AmountAfter)
+              .sub(BN.from(token1AmountBefore))
               .sub(token1_fee);
-            token0_balance_after_collect = new BN(token0AmountAfter);
-            token1_balance_after_collect = new BN(token1AmountAfter);
+            token0_balance_after_collect = BN.from(token0AmountAfter);
+            token1_balance_after_collect = BN.from(token1AmountAfter);
             amount_limit = getAssetsBalanceInUSDC(
               token0_balance_after_collect,
               token1_balance_after_collect,
@@ -266,7 +269,7 @@ describe("Test Strategy", function () {
             .mul(curr_price)
             .mul(curr_price)
             .div(amount_in_denominator)
-            .shrn(96 * 2);
+            .shr(96 * 2);
           // do swap if necessary
           if (token0_balance_after_collect.gt(amount0_in)) {
             // swap exact USDC for WETH
@@ -289,8 +292,8 @@ describe("Test Strategy", function () {
           // notice this is only a measurement for price slippage, don't take it as cost for net value calculation
           swap_fee = amount_limit.sub(
             getAssetsBalanceInUSDC(
-              new BN(token0_balance_before_mint),
-              new BN(token1_balance_before_mint),
+              BN.from(token0_balance_before_mint),
+              BN.from(token1_balance_before_mint),
               curr_price
             )
           );
@@ -371,7 +374,7 @@ describe("Test Strategy", function () {
     let eventDB = await EventDBManager.buildInstance(eventDBManagerPath);
     let strategy = await buildStrategy(
       eventDB,
-      await buildAccount(initialAssetsAmount, new BN(0)),
+      await buildAccount(initialAssetsAmount, BN.from(0)),
       trigger,
       cache,
       act,
@@ -392,7 +395,7 @@ function getStandardDeviation(data: BN[]): BN {
     return x.mul(x);
   };
 
-  let mean: BN = data.reduce(sum).divn(data.length);
+  let mean: BN = data.reduce(sum).div(data.length);
   let deviations = data.map(function (x: BN) {
     return x.sub(mean);
   });
@@ -400,7 +403,7 @@ function getStandardDeviation(data: BN[]): BN {
     deviations
       .map(square)
       .reduce(sum)
-      .divn(data.length - 1)
+      .div(data.length - 1)
   );
 }
 
@@ -409,8 +412,8 @@ function sqrt(value: BN): BN {
 }
 
 function getAvailableTick(tick: BN, tickSpacing: number): number {
-  let quotient = tick.divn(tickSpacing);
-  return quotient.muln(tickSpacing).toNumber();
+  let quotient = tick.div(tickSpacing);
+  return quotient.mul(tickSpacing).toNumber();
 }
 
 function getAssetsBalanceInUSDC(
@@ -418,13 +421,15 @@ function getAssetsBalanceInUSDC(
   token1_balance: BN,
   curr_price: BN
 ): BN {
-  return token0_balance.add(token1_balance.div(curr_price.sqr().shrn(96 * 2)));
+  return token0_balance.add(token1_balance.div(curr_price.pow(2).shr(96 * 2)));
 }
 
 function inversePriceX192(priceX192: BN): BN {
-  return new BN(1).shln(192 * 2).div(priceX192);
+  return BN.from(1)
+    .shl(192 * 2)
+    .div(priceX192);
 }
 
 function sqrtPriceToView(sqrtPriceX96: BN): BN {
-  return get10pow(12).div(new BN(sqrtPriceX96).sqr().shrn(96 * 2));
+  return get10pow(12).div(sqrtPriceX96.pow(2).shr(96 * 2));
 }

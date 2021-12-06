@@ -1,7 +1,3 @@
-import { LiquidityEvent } from "./LiquidityEvent";
-import { SwapEvent } from "./SwapEvent";
-import { getTomorrow, format } from "./util/DateUtils";
-import { EventType } from "./EventType";
 import { Engine, buildDryRunEngine } from "./Engine";
 import { Account } from "./Account";
 import JSBI from "jsbi";
@@ -12,7 +8,12 @@ import {
   SimulationDataManager,
   SimulatorClient,
   SQLiteSimulationDataManager,
+  getTomorrow,
+  format,
 } from "@bella-defintech/uniswap-v3-simulator";
+import { LiquidityEvent } from "@bella-defintech/uniswap-v3-simulator/dist/entity/LiquidityEvent";
+import { SwapEvent } from "@bella-defintech/uniswap-v3-simulator/dist/entity/SwapEvent";
+import { EventType } from "@bella-defintech/uniswap-v3-simulator/dist/enum/EventType";
 
 export interface Strategy {
   trigger: (
@@ -82,7 +83,6 @@ export async function buildStrategy(
   */
   async function backtest(startDate: Date, endDate: Date): Promise<void> {
     // initial environment
-    const systemUser = "0xSYSTEM";
     async function getAndSortEventByDate(
       startDate: Date,
       endDate: Date
@@ -135,7 +135,7 @@ export async function buildStrategy(
       switch (event.type) {
         case EventType.MINT:
           await configurableCorePool.mint(
-            systemUser,
+            event.recipient,
             event.tickLower,
             event.tickUpper,
             event.liquidity
@@ -143,7 +143,7 @@ export async function buildStrategy(
           break;
         case EventType.BURN:
           await configurableCorePool.burn(
-            systemUser,
+            event.msgSender,
             event.tickLower,
             event.tickUpper,
             event.liquidity
