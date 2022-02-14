@@ -1,6 +1,6 @@
 import { Knex, knex as knexBuilder } from "knex";
 import { DateConverter } from "@bella-defintech/uniswap-v3-simulator";
-import BN from "bn.js";
+import { BigNumber as BN } from "ethers";
 import { RebalanceLog } from "./Backtest.test";
 
 const DATE_FORMAT: string = "YYYY-MM-DD HH:mm:ss.SSS";

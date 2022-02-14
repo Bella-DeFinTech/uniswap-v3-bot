@@ -1,4 +1,4 @@
-import BN from "bn.js";
+import { BigNumber as BN } from "ethers";
 
 export interface Account {
   USDC: BN;
